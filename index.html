@@ -3,89 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 飘雪酒馆 (Gemini Edition)</title>
-    <!-- 1. 引入 Tailwind CSS (快速写样式) -->
+    <title>DeepSeek 雪夜酒馆</title>
+    <!-- 1. 样式库 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 2. 引入 tsParticles (偷懒实现飘雪) -->
+    <!-- 2. 粒子库 tsParticles -->
     <script src="https://cdn.jsdelivr.net/npm/tsparticles-engine@2/tsparticles.engine.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tsparticles-slim@2/tsparticles.slim.bundle.min.js"></script>
-    <!-- 3. 引入 Marked (Markdown渲染) -->
+    <!-- 3. Markdown 解析 -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        body { background-color: #0f111a; color: #e2e8f0; font-family: sans-serif; }
-        /* 自定义滚动条 */
+        body { background-color: #0f111a; color: #e2e8f0; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+        /* 滚动条美化 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         
-        /* 玻璃拟态卡片 */
+        /* 玻璃拟态 */
         .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
         }
 
         /* 消息气泡 */
-        .msg-user { background-color: #3b82f6; color: white; border-radius: 12px 12px 0 12px; }
+        .msg-user { background-color: #4f46e5; color: white; border-radius: 12px 12px 0 12px; }
         .msg-ai { background-color: #334155; color: #e2e8f0; border-radius: 12px 12px 12px 0; }
         
-        /* Markdown 样式微调 */
-        .markdown-body pre { background: #0f111a; padding: 10px; border-radius: 6px; overflow-x: auto; }
-        .markdown-body code { font-family: monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px; }
+        /* Markdown 内容样式 */
+        .markdown-body p { margin-bottom: 0.5em; }
+        .markdown-body pre { background: #1e1e1e; padding: 10px; border-radius: 6px; overflow-x: auto; margin-top: 8px; }
+        .markdown-body code { font-family: Consolas, Monaco, monospace; background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px; font-size: 0.9em; }
+        .markdown-body ul { list-style-type: disc; padding-left: 20px; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 20px; }
     </style>
 </head>
-<body class="h-screen w-screen overflow-hidden relative">
+<body class="h-screen w-screen overflow-hidden relative selection:bg-indigo-500 selection:text-white">
 
-    <!-- 粒子背景容器 -->
-    <div id="tsparticles" class="absolute inset-0 z-0"></div>
+    <!-- 背景层 -->
+    <div id="tsparticles" class="absolute inset-0 z-0 pointer-events-none"></div>
 
-    <!-- 主界面容器 -->
+    <!-- 主界面 -->
     <div class="relative z-10 container mx-auto h-full max-w-4xl p-4 flex flex-col">
         
-        <!-- 顶部栏：标题 + 设置 -->
-        <header class="glass-panel p-4 rounded-xl flex flex-wrap justify-between items-center mb-4 gap-2">
+        <!-- 顶部栏 -->
+        <header class="glass-panel p-4 rounded-xl flex flex-wrap justify-between items-center mb-4 gap-3">
             <div class="flex items-center gap-2">
-                <span class="text-2xl">❄️</span>
-                <h1 class="text-xl font-bold tracking-wider">AI Tavern</h1>
+                <div class="bg-indigo-600 p-2 rounded-lg">❄️</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide">DeepSeek Tavern</h1>
+                    <div class="text-xs text-slate-400">Powered by SiliconFlow</div>
+                </div>
             </div>
             
-            <div class="flex gap-2 items-center">
-                <!-- API Key 输入 -->
-                <input type="password" id="apiKeyInput" placeholder="在此粘贴 Gemini API Key" 
-                    class="bg-slate-800 border border-slate-600 rounded px-3 py-1 text-sm w-48 focus:outline-none focus:border-blue-500 transition">
+            <div class="flex gap-2 items-center flex-wrap">
+                <input type="password" id="apiKeyInput" placeholder="输入 SiliconFlow API Key" 
+                    class="bg-slate-800/80 border border-slate-600 rounded px-3 py-1.5 text-sm w-52 focus:outline-none focus:border-indigo-500 transition text-slate-200 placeholder-slate-500">
                 
-                <!-- 存档/读档按钮 -->
-                <button onclick="exportHistory()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm transition" title="保存对话到本地">💾 保存</button>
-                <button onclick="document.getElementById('fileInput').click()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-sm transition" title="从本地加载对话">📂 读取</button>
-                <button onclick="clearHistory()" class="bg-red-900/50 hover:bg-red-800/50 text-red-200 px-3 py-1 rounded text-sm transition" title="清空历史">🗑️</button>
-                
-                <!-- 隐藏的文件上传控件 -->
+                <div class="flex gap-1">
+                    <button onclick="exportHistory()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-sm transition" title="保存对话">💾</button>
+                    <button onclick="document.getElementById('fileInput').click()" class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-sm transition" title="读取对话">📂</button>
+                    <button onclick="clearHistory()" class="bg-red-900/40 hover:bg-red-800/60 text-red-200 px-3 py-1.5 rounded text-sm transition" title="清空">🗑️</button>
+                </div>
                 <input type="file" id="fileInput" accept=".json" class="hidden" onchange="importHistory(this)">
             </div>
         </header>
 
-        <!-- 对话区域 -->
-        <main id="chatContainer" class="glass-panel flex-1 rounded-xl p-4 overflow-y-auto flex flex-col gap-4 mb-4">
-            <!-- 欢迎消息 -->
-            <div class="flex justify-start">
-                <div class="msg-ai px-4 py-3 max-w-[85%] shadow-lg">
-                    <p>你好！我是你的 AI 助手。请在右上方填入 API Key 开始对话。</p>
-                    <p class="text-xs text-slate-400 mt-2">支持 Markdown | 自动保存 | 本地读写</p>
+        <!-- 聊天显示区 -->
+        <main id="chatContainer" class="glass-panel flex-1 rounded-xl p-4 overflow-y-auto flex flex-col gap-6 mb-4 scroll-smooth">
+            <!-- 初始欢迎语 -->
+            <div class="flex justify-start opacity-80">
+                <div class="msg-ai px-5 py-3 max-w-[85%] shadow-lg text-sm">
+                    <p>你好！</p>
+                    <p class="mt-1">在这个安静的雪夜，我们聊点什么？请在上方填入 API Key。</p>
                 </div>
             </div>
         </main>
 
-        <!-- 输入区域 -->
-        <footer class="glass-panel p-4 rounded-xl">
-            <div class="flex gap-2">
-                <textarea id="userInput" rows="1" placeholder="输入消息... (Shift+Enter 换行)" 
-                    class="flex-1 bg-slate-800 border-none outline-none text-white px-4 py-3 rounded-lg resize-none overflow-hidden"
+        <!-- 输入区 -->
+        <footer class="glass-panel p-3 rounded-xl">
+            <div class="flex gap-3 items-end">
+                <textarea id="userInput" rows="1" placeholder="发送消息给 DeepSeek... (Shift+Enter 换行)" 
+                    class="flex-1 bg-slate-800/50 border border-transparent focus:border-indigo-500/50 outline-none text-white px-4 py-3 rounded-lg resize-none overflow-hidden transition-colors"
                     oninput="autoResize(this)"
                     onkeydown="handleEnter(event)"></textarea>
                 <button id="sendBtn" onclick="sendMessage()" 
-                    class="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-lg font-medium transition flex items-center justify-center">
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white h-[46px] px-6 rounded-lg font-medium transition shadow-lg shadow-indigo-500/20 whitespace-nowrap">
                     发送
                 </button>
             </div>
@@ -93,63 +98,64 @@
     </div>
 
     <script>
-        // --- 1. tsParticles 配置 (偷懒部分：直接用配置实现飘雪) ---
+        // --- 1. 粒子背景配置 (慢速下落，无排斥) ---
         (async () => {
             await loadSlim(tsParticles);
             await tsParticles.load("tsparticles", {
+                fpsLimit: 60,
                 particles: {
-                    number: { value: 100, density: { enable: true, area: 800 } },
-                    color: { value: "#ffffff" },
+                    number: { value: 80, density: { enable: true, area: 800 } },
+                    color: { value: "#cbd5e1" }, // 淡淡的蓝灰色雪花
                     shape: { type: "circle" },
-                    opacity: { value: 0.5, random: true },
+                    opacity: { value: 0.6, random: true },
                     size: { value: 2, random: true },
                     move: {
                         enable: true,
-                        speed: 1, // 飘落速度
-                        direction: "bottom", // 向下飘
-                        random: true,
-                        straight: false,
-                        outModes: { default: "out" }, // 移出屏幕后重置
+                        speed: 0.5, // 速度调慢，营造静谧感
+                        direction: "bottom", // 垂直向下
+                        random: false, // 不随机乱飘
+                        straight: false, 
+                        outModes: "out",
                     }
                 },
-                interactivity: {
-                    events: { onHover: { enable: true, mode: "repulse" } }, // 鼠标悬停排斥效果
-                    modes: { repulse: { distance: 100, duration: 0.4 } }
-                }
+                // 彻底移除了 interactivity 交互模块
+                detectRetina: true,
             });
         })();
 
-        // --- 2. 核心逻辑 ---
+        // --- 2. 核心逻辑 (OpenAI 兼容格式) ---
         
-        let chatHistory = []; // 保存上下文
+        let chatHistory = []; 
         const chatContainer = document.getElementById('chatContainer');
         const userInput = document.getElementById('userInput');
         const apiKeyInput = document.getElementById('apiKeyInput');
+        const LOCAL_STORAGE_KEY_API = 'siliconflow_api_key'; // 修改了存储key名
+        const LOCAL_STORAGE_KEY_CHAT = 'deepseek_chat_history';
 
-        // 初始化：加载本地缓存
+        // 初始化加载
         window.onload = () => {
-            const savedKey = localStorage.getItem('gemini_api_key');
+            const savedKey = localStorage.getItem(LOCAL_STORAGE_KEY_API);
             if (savedKey) apiKeyInput.value = savedKey;
 
-            const savedHistory = localStorage.getItem('chat_history');
+            const savedHistory = localStorage.getItem(LOCAL_STORAGE_KEY_CHAT);
             if (savedHistory) {
                 chatHistory = JSON.parse(savedHistory);
                 renderHistory();
             }
         };
 
-        // 监听 API Key 变化并保存
+        // 监听 Key 变化
         apiKeyInput.addEventListener('change', (e) => {
-            localStorage.setItem('gemini_api_key', e.target.value);
+            localStorage.setItem(LOCAL_STORAGE_KEY_API, e.target.value.trim());
         });
 
-        // 自动调整输入框高度
+        // 自动增高输入框
         function autoResize(el) {
             el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
+            el.style.height = Math.min(el.scrollHeight, 150) + 'px'; // 限制最大高度
         }
 
-        // 处理回车发送
+        // 回车发送
         function handleEnter(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -157,141 +163,141 @@
             }
         }
 
-        // 渲染单条消息
-        function appendMessage(role, text) {
+        // 添加消息到界面
+        function appendMessage(role, content) {
             const div = document.createElement('div');
-            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`;
             
             const bubble = document.createElement('div');
-            bubble.className = `${role === 'user' ? 'msg-user' : 'msg-ai'} px-4 py-3 max-w-[85%] shadow-lg markdown-body`;
+            bubble.className = `${role === 'user' ? 'msg-user' : 'msg-ai'} px-5 py-3 max-w-[85%] shadow-md markdown-body text-[15px] leading-relaxed`;
             
-            // 使用 marked 解析 markdown
-            bubble.innerHTML = role === 'user' ? text.replace(/\n/g, '<br>') : marked.parse(text);
+            // Markdown 渲染
+            bubble.innerHTML = role === 'user' 
+                ? content.replace(/\n/g, '<br>') 
+                : marked.parse(content);
             
             div.appendChild(bubble);
             chatContainer.appendChild(div);
-            
-            // 滚动到底部
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // 重新渲染所有历史
+        // 渲染历史记录
         function renderHistory() {
-            chatContainer.innerHTML = ''; // 清空
-            // 保留那条欢迎语或者也可以不保留，这里选择只渲染历史
-            if(chatHistory.length === 0) {
-                 const welcome = `<div class="flex justify-start"><div class="msg-ai px-4 py-3 max-w-[85%] shadow-lg"><p>对话记录已清空或加载。请开始新的对话。</p></div></div>`;
-                 chatContainer.innerHTML = welcome;
+            chatContainer.innerHTML = '';
+            if (chatHistory.length === 0) {
+                 chatContainer.innerHTML = `<div class="flex justify-start opacity-60"><div class="msg-ai px-5 py-3"><p>历史记录已清空。</p></div></div>`;
                  return;
             }
             chatHistory.forEach(msg => {
-                appendMessage(msg.role, msg.parts[0].text);
+                appendMessage(msg.role, msg.content);
             });
         }
 
-        // 发送消息
+        // 发送消息 (SiliconFlow API)
         async function sendMessage() {
             const text = userInput.value.trim();
             const key = apiKeyInput.value.trim();
 
             if (!text) return;
-            if (!key) { alert('请先输入 Google Gemini API Key'); return; }
+            if (!key) { alert('请先在右上角填入 SiliconFlow API Key'); return; }
 
-            // 1. UI 显示用户消息
+            // 1. UI更新
             userInput.value = '';
             userInput.style.height = 'auto';
             appendMessage('user', text);
 
-            // 2. 更新历史数据 (Gemini 格式)
-            const newMsg = { role: 'user', parts: [{ text: text }] };
-            chatHistory.push(newMsg);
+            // 2. 数据更新 (OpenAI 格式: role='user'/'assistant', content=string)
+            chatHistory.push({ role: 'user', content: text });
 
-            // 3. 显示正在输入状态
+            // 3. Loading 状态
+            const loadingId = 'loading-' + Date.now();
             const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'flex justify-start loading-indicator';
-            loadingDiv.innerHTML = `<div class="msg-ai px-4 py-2 text-sm italic opacity-70">Thinking... ❄️</div>`;
+            loadingDiv.id = loadingId;
+            loadingDiv.className = 'flex justify-start';
+            loadingDiv.innerHTML = `<div class="msg-ai px-5 py-3 opacity-70 flex items-center gap-2"><span class="animate-pulse">Thinking</span><span class="animate-bounce">.</span><span class="animate-bounce delay-100">.</span><span class="animate-bounce delay-200">.</span></div>`;
             chatContainer.appendChild(loadingDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
 
             try {
-                // 4. 调用 API (Google Gemini)
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: chatHistory })
+                // 4. API 请求
+                const response = await fetch("https://api.siliconflow.cn/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${key}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: "deepseek-ai/DeepSeek-V3", // SiliconFlow 上的模型ID
+                        messages: chatHistory,
+                        stream: false, // 简化实现，这里暂时不用流式，如果要流式需要改写 fetch 处理
+                        temperature: 0.7
+                    })
                 });
 
                 const data = await response.json();
                 
-                // 移除 loading
-                chatContainer.removeChild(loadingDiv);
+                // 移除 Loading
+                const loader = document.getElementById(loadingId);
+                if(loader) loader.remove();
 
-                if (data.error) {
-                    throw new Error(data.error.message);
+                if (data.error || !data.choices) {
+                    throw new Error(data.error ? data.error.message : 'API 返回格式异常');
                 }
 
-                const aiText = data.candidates[0].content.parts[0].text;
+                const aiText = data.choices[0].message.content;
 
-                // 5. UI 显示 AI 消息
-                appendMessage('model', aiText);
+                // 5. 显示 AI 回复
+                appendMessage('assistant', aiText);
                 
                 // 6. 保存历史
-                chatHistory.push({ role: 'model', parts: [{ text: aiText }] });
-                localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+                chatHistory.push({ role: 'assistant', content: aiText });
+                localStorage.setItem(LOCAL_STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
 
             } catch (error) {
-                if(document.querySelector('.loading-indicator')) chatContainer.removeChild(loadingDiv);
-                appendMessage('model', `**Error:** ${error.message}`);
+                const loader = document.getElementById(loadingId);
+                if(loader) loader.remove();
+                appendMessage('assistant', `⚠️ **请求出错:** ${error.message}`);
             }
         }
 
-        // --- 3. 存档/读档功能 ---
+        // --- 3. 存读档功能 ---
 
-        // 导出历史 (JSON)
         function exportHistory() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(chatHistory));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "chat_history_" + new Date().toISOString().slice(0,10) + ".json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+            if(chatHistory.length === 0) { alert("没有历史记录可保存"); return; }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(chatHistory, null, 2));
+            const dlNode = document.createElement('a');
+            dlNode.setAttribute("href", dataStr);
+            dlNode.setAttribute("download", `deepseek_chat_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dlNode);
+            dlNode.click();
+            dlNode.remove();
         }
 
-        // 导入历史
         function importHistory(input) {
             const file = input.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const json = JSON.parse(e.target.result);
                     if (Array.isArray(json)) {
                         chatHistory = json;
-                        localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+                        localStorage.setItem(LOCAL_STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
                         renderHistory();
-                    } else {
-                        alert('文件格式不正确');
-                    }
-                } catch (err) {
-                    alert('无法解析 JSON 文件');
-                }
+                    } else { alert('文件格式错误：必须是 JSON 数组'); }
+                } catch (err) { alert('JSON 解析失败'); }
             };
             reader.readAsText(file);
-            // 重置 input 以便下次能重复选同一个文件
             input.value = '';
         }
 
-        // 清空历史
         function clearHistory() {
-            if(confirm('确定要清空所有对话记录吗？')) {
+            if(confirm('确定清空当前对话历史吗？')) {
                 chatHistory = [];
-                localStorage.removeItem('chat_history');
+                localStorage.removeItem(LOCAL_STORAGE_KEY_CHAT);
                 renderHistory();
             }
         }
-
     </script>
 </body>
 </html>
